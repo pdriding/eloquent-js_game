@@ -122,6 +122,66 @@ var Coin = class Coin {
 
 Coin.prototype.size = new Vec(0.6, 0.6);
 
+var Monster = class Monster {
+  constructor(pos, left) {
+    this.pos = pos;
+    this.left = left;
+  }
+
+  get type() {
+    return "monster";
+  }
+
+  static create(pos) {
+    return new Monster(pos.plus(new Vec(0, -1)));
+  }
+
+  update(time, state) {
+    if (typeof this.left === "undefined") {
+      this.left = true;
+    }
+
+    let newPos;
+
+    if (this.left) {
+      newPos = this.pos.plus(new Vec(-time, 0));
+    } else {
+      newPos = this.pos.plus(new Vec(time, 0));
+    }
+    if (state.level.touches(newPos, this.size, "wall")) {
+      return new Monster(newPos, (this.left = !this.left));
+    }
+
+    return new Monster(newPos, this.left);
+  }
+
+  collide(state) {
+    let impactY = state.player.pos.y;
+    if (impactY < this.pos.y + 0.5) {
+      let actors = state.actors.filter(
+        (actor) => actor.constructor.name != "Monster"
+      );
+      return new State(state.level, actors, "playing");
+    } else {
+      console.log("haaaaaaaa");
+      return new State(state.level, state.actors, "lost");
+    }
+  }
+};
+
+Monster.prototype.size = new Vec(1.2, 2);
+
+Lava.prototype.update = function (time, state) {
+  let newPos = this.pos.plus(this.speed.times(time));
+  if (!state.level.touches(newPos, this.size, "wall")) {
+    return new Lava(newPos, this.speed, this.reset);
+  } else if (this.reset) {
+    return new Lava(this.reset, this.speed, this.reset);
+  } else {
+    return new Lava(this.pos, this.speed.times(-1));
+  }
+};
+
 var levelChars = {
   ".": "empty",
   "#": "wall",
@@ -131,6 +191,7 @@ var levelChars = {
   "=": Lava,
   "|": Lava,
   v: Lava,
+  M: Monster,
 };
 
 var simpleLevel = new Level(simpleLevelPlan);
@@ -282,16 +343,16 @@ Coin.prototype.collide = function (state) {
   return new State(state.level, filtered, status);
 };
 
-Lava.prototype.update = function (time, state) {
-  let newPos = this.pos.plus(this.speed.times(time));
-  if (!state.level.touches(newPos, this.size, "wall")) {
-    return new Lava(newPos, this.speed, this.reset);
-  } else if (this.reset) {
-    return new Lava(this.reset, this.speed, this.reset);
-  } else {
-    return new Lava(this.pos, this.speed.times(-1));
-  }
-};
+// Lava.prototype.update = function (time, state) {
+//   let newPos = this.pos.plus(this.speed.times(time));
+//   if (!state.level.touches(newPos, this.size, "wall")) {
+//     return new Lava(newPos, this.speed, this.reset);
+//   } else if (this.reset) {
+//     return new Lava(this.reset, this.speed, this.reset);
+//   } else {
+//     return new Lava(this.pos, this.speed.times(-1));
+//   }
+// };
 
 var wobbleSpeed = 8,
   wobbleDist = 0.07;
